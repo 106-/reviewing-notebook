@@ -22,9 +22,7 @@ jobs:
       - name: Write LLM response to file
         if: steps.inference.outputs.response != ''
         run: |
-          cat <<EOF > comment.txt
-${{ steps.inference.outputs.response }}
-EOF
+          echo "${{ steps.inference.outputs.response }}" | tee comment.txt
 
       - name: Comment on PR
         if: steps.inference.outputs.response != ''
