@@ -2,7 +2,7 @@ name: 'Review with LLM'
 on: 
   pull_request:
     paths:
-      - notebooks/**/*.ipynb
+      - notebooks/*.ipynb
  
 jobs:
   review:
@@ -24,7 +24,7 @@ jobs:
         uses: tj-actions/changed-files@4cd184a1dd542b79cca1d4d7938e4154a6520ca7 # v46.0.0
         with:
           files: |
-            notebooks/**
+            notebooks/*
 
       # システムプロンプトの読み込み
       - name: Read notebook-coding-guidelines.md into environment variable
