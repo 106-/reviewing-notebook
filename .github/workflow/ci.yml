@@ -1,0 +1,70 @@
+name: 'Review with LLM'
+on: 
+  pull_request:
+    paths:
+      - notebooks/**/*.ipynb
+ 
+jobs:
+  review:
+    permissions:
+      models: read
+      # ファイルをプロンプトとして渡すために必要な権限
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+ 
+      # 変更されたファイルを取得する
+      - name: Get changed files in the contents folder
+        id: changed-files-specific
+        uses: tj-actions/changed-files@4cd184a1dd542b79cca1d4d7938e4154a6520ca7 # v46.0.0
+        with:
+          files: |
+            notebooks/**
+
+      # システムプロンプトの読み込み
+      - name: Read notebook-coding-guidelines.md into environment variable
+        id: read-guidelines
+        run: |
+          {
+            echo 'guidelines<<EOF'
+            cat notebook-coding-guidelines.md
+            echo 'EOF'
+          } >> $GITHUB_ENV 
+
+      # ファイルチェンジをまとめる
+      - name: Concatenate changed files into a single prompt
+        id: concat
+        if: steps.changed-files-specific.outputs.all_changed_files != ''
+        run: |
+          files="${{ steps.changed-files-specific.outputs.all_changed_files }}"
+          mkdir -p tmp
+          for f in $files; do
+            echo "# FILE: $f" >> tmp/combined_prompt.txt
+            cat "$f" >> tmp/combined_prompt.txt
+            echo -e "\n\n" >> tmp/combined_prompt.txt
+          done
+          echo "prompt_file=tmp/combined_prompt.txt" >> $GITHUB_OUTPUT
+
+      - name: Run AI Inference with concatenated prompt
+        id: inference
+        uses: actions/ai-inference@f8ee4c952b7dca7b8a4529edd04dc5cc3d49c435
+        with:
+          system-prompt: ${{ env.guidelines }}
+          prompt-file: ${{ steps.concat.outputs.prompt_file }}
+ 
+      - name: Comment on PR
+        id: comment
+        if: steps.changed-files-specific.outputs.all_changed_files != ''
+        env:
+          RESPONSE: ${{ steps.inference.outputs.response }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # gh CLI を使用してプルリクエストにコメントを投稿する
+        run: |
+          echo "${{ env.RESPONSE }}" > comment.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.txt
+          echo "Commented on PR #${{ github.event.pull_request.number }} with response: ${{ env.RESPONSE }}"
