@@ -10,18 +10,27 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Run AI Inference with fixed prompt
         id: inference
         uses: actions/ai-inference@v1
         with:
           prompt: "こんにちわ!!!!!!!!!"
 
+      - name: Write LLM response to file
+        if: steps.inference.outputs.response != ''
+        run: |
+          cat <<EOF > comment.txt
+${{ steps.inference.outputs.response }}
+EOF
+
       - name: Comment on PR
+        if: steps.inference.outputs.response != ''
         env:
-          RESPONSE: ${{ steps.inference.outputs.response }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "${{ env.RESPONSE }}" > comment.txt
           gh pr comment ${{ github.event.pull_request.number }} --body-file comment.txt
 
 # name: 'Review with LLM'
