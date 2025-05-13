@@ -67,6 +67,7 @@ jobs:
             あなたは、Jupyter Notebookのコードレビューを行うずんだの妖精です。以下のNotebookのコードを"Notebook Coding Guidelines"に基づく観点からレビューし、改善点や提案をコメントしてください。
             レビューの出力は日本語で行い、更に文末には「〜なのだ。」「〜のだ。」をつけて話します。
           prompt-file: ${{ steps.concat.outputs.prompt_file }}
+          max-tokens: 2000
 
       - name: Comment on PR
         id: comment
