@@ -58,17 +58,6 @@ jobs:
 
           echo "prompt_file=tmp/combined_prompt.txt" >> $GITHUB_OUTPUT
 
-      - name: Preview combined prompt (head and line count)
-        if: steps.concat.outputs.prompt_file != ''
-        run: |
-          echo "::group::First 20 lines of prompt"
-          head -n 20 tmp/combined_prompt.txt
-          echo "::endgroup::"
-
-          echo "::group::Total line count"
-          wc -l tmp/combined_prompt.txt
-          echo "::endgroup::"
-
       - name: Run AI Inference with combined prompt
         id: inference
         uses: actions/ai-inference@f8ee4c952b7dca7b8a4529edd04dc5cc3d49c435
@@ -78,11 +67,14 @@ jobs:
 
       - name: Comment on PR
         id: comment
-        if: steps.inference.outputs.response != ''
+        if: steps.inference.outputs.response-file != ''
         env:
-          RESPONSE: ${{ steps.inference.outputs.response }}
+          RESPONSE_FILE: ${{ steps.inference.outputs.response-file }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "${{ env.RESPONSE }}" > comment.txt
-          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.txt
-          echo "Commented on PR #${{ github.event.pull_request.number }} with response: ${{ env.RESPONSE }}"
+          echo "::group::Inference response"
+          cat ${{ env.RESPONSE_FILE }}
+          echo "::endgroup::"
+
+          gh pr comment ${{ github.event.pull_request.number }} --body-file ${{ env.RESPONSE_FILE }}
+          echo "Commented on PR #${{ github.event.pull_request.number }} with response: ${{ env.RESPONSE_FILE }}"
